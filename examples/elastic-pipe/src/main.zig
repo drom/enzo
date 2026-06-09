@@ -1,11 +1,14 @@
 const std = @import("std");
+const enzo = @import("enzo");
 const Io = std.Io;
 
 const elastic_pipe = @import("elastic_pipe");
 
+//
+extern fn sim_set_data(val: c_int) void;
+extern fn get_time_stamp() f64;
+
 pub fn main(init: std.process.Init) !void {
-    // Prints to stderr, unbuffered, ignoring potential errors.
-    std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
 
     // This is appropriate for anything that lives as long as the process.
     const arena: std.mem.Allocator = init.arena.allocator();
@@ -29,6 +32,14 @@ pub fn main(init: std.process.Init) !void {
     try elastic_pipe.printAnotherMessage(stdout_writer);
 
     try stdout_writer.flush(); // Don't forget to flush!
+
+    // DUMMY test of Enzo
+    const res1 = enzo.add(11, 13);
+    std.debug.print("The answer is: {}\n", .{res1});
+
+    // DUMMY test of Verilated wrapper
+    const res2 = get_time_stamp();
+    std.debug.print("The time is: {}\n", .{res2});
 }
 
 test "simple test" {
