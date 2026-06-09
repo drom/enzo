@@ -83,6 +83,67 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
+    // Run Verilator
+    // Verilog Parameters
+    const dw_val = b.option(
+        u32,
+        "DW",
+        "Data Bus width parameter",
+    ) orelse 32;
+
+    const run_verilator = b.addSystemCommand(&.{
+        "verilator",
+        "-cc",
+        "--trace",
+        "--Mdir",
+        "obj_dir",
+        b.fmt("-GDW={d}", .{dw_val}),
+        "vsrc/top.v",
+    });
+    const run_make = b.addSystemCommand(&.{
+        "make",
+        "-j",
+        "6",
+        "-C",
+        "obj_dir",
+        "-f",
+        "Vtop.mk",
+        "CXX=zig c++",
+        "LINK=zig c++",
+    });
+
+    run_make.step.dependOn(&run_verilator.step);
+    exe.step.dependOn(&run_make.step);
+    exe.root_module.link_libc = true;
+    exe.root_module.link_libcpp = true;
+    const vroot = "/tools/verilator/latest/share/verilator/include";
+    exe.root_module.addIncludePath(.{ .cwd_relative = vroot });
+    exe.root_module.addIncludePath(.{ .cwd_relative = b.pathJoin(&.{ vroot, "vltstd" }) });
+    exe.root_module.addIncludePath(.{ .cwd_relative = "obj_dir" });
+    exe.root_module.addObjectFile(b.path("obj_dir/Vtop__ALL.a"));
+    exe.root_module.addCSourceFiles(.{
+        .root = .{ .cwd_relative = vroot },
+        .files = &.{
+            "verilated.cpp",
+            "verilated_vcd_c.cpp",
+            "verilated_threads.cpp",
+        },
+        .flags = &[_][]const u8{"-std=c++17"},
+    });
+
+    // ENZO dependency
+    // fetch the dependency from the .zon file
+    const enzo_dependency = b.dependency("enzo_dep", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    // extract module form the dependency using exported name
+    const enzo_module = enzo_dependency.module("enzo");
+
+    // add the module to our exacutable root
+    exe.root_module.addImport("enzo", enzo_module);
+
     // This declares intent for the executable to be installed into the
     // install prefix when running `zig build` (i.e. when executing the default
     // step). By default the install prefix is `zig-out/` but can be overridden
