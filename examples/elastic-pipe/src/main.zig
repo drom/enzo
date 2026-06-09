@@ -5,8 +5,10 @@ const Io = std.Io;
 const elastic_pipe = @import("elastic_pipe");
 
 //
-extern fn sim_set_data(val: c_int) void;
+// extern fn sim_set_data(val: c_int) void;
 extern fn get_time_stamp() f64;
+extern fn sim_init(vcd_filename: ?[*:0]const u8) void;
+extern fn sim_cleanup() void;
 
 pub fn main(init: std.process.Init) !void {
 
@@ -38,6 +40,11 @@ pub fn main(init: std.process.Init) !void {
     std.debug.print("The answer is: {}\n", .{res1});
 
     // DUMMY test of Verilated wrapper
+
+    sim_init("waveform.vcd");
+    // sim_init(null);
+
+    defer sim_cleanup();
     const res2 = get_time_stamp();
     std.debug.print("The time is: {}\n", .{res2});
 }

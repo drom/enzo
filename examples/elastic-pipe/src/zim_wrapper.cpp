@@ -5,9 +5,10 @@
 // Global pointers for the simulation state
 Vtop* top = nullptr;
 VerilatedVcdC* tfp = nullptr;
+uint32_t global_data_width = 0;
 
 // Simulation time counter
-vluint64_t main_time = 42;
+vluint64_t main_time = 0;
 
 // Called by $time in Verilog (Verilator requires this function to be defined)
 double sc_time_stamp() {
@@ -17,19 +18,23 @@ double sc_time_stamp() {
 extern "C" {
 
     // 1. Initialization
-    void sim_init() {
-        // Enable tracing in Verilator
-        Verilated::traceEverOn(true);
+    void sim_init(const char* vcd_filename) {
 
-        // Instantiate the module and the trace object
+        // Context setup
+        VerilatedContext* contextp = Verilated::threadContextp();
+        contextp->timeunit(-11);
+        contextp->timeprecision(-11);
+
+        // Instantiate the module
         top = new Vtop;
-        tfp = new VerilatedVcdC;
 
-        // Attach the trace object to the module (trace depth of 99 levels)
-        top->trace(tfp, 99);
-
-        // Open the output file
-        tfp->open("waveform.vcd");
+        // Enable VCD tracing if a filename was provided
+        if (vcd_filename) {
+            Verilated::traceEverOn(true);
+            tfp = new VerilatedVcdC;
+            top->trace(tfp, 99);
+            tfp->open(vcd_filename);
+        }
     }
 
     // 2. Cleanup
