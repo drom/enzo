@@ -1,0 +1,26 @@
+TOP top
+rst
+clk :clock
+
+/t_0_((?<valid>req)|(?<ready>ack)|)/
+
+
+
+
+/d1((?<valid>_req)|(?<ready>_ack)|)/
+
+
+
+
+
+/d2((?<valid>_req)|(?<ready>_ack)|)/
+
+
+
+
+
+/i_0_((?<valid>req)|(?<ready>ack)|)/
+
+
+
+

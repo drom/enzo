@@ -27,6 +27,12 @@ pub fn build(b: *std.Build) void {
         "Data Bus width parameter",
     ) orelse 32;
 
+    const opt_flag = switch (optimize) {
+        .Debug => "-O0",
+        .ReleaseSafe, .ReleaseFast => "-O3",
+        .ReleaseSmall => "-Os",
+    };
+
     const run_verilator = b.addSystemCommand(&.{
         "verilator",
         "-cc",
@@ -46,6 +52,8 @@ pub fn build(b: *std.Build) void {
         "Vtop.mk",
         "CXX=zig c++",
         "LINK=zig c++",
+        b.fmt("OPT_FAST={s}", .{opt_flag}),
+        b.fmt("OPT_SLOW={s}", .{opt_flag}),
     });
 
     run_make.step.dependOn(&run_verilator.step);
@@ -67,11 +75,16 @@ pub fn build(b: *std.Build) void {
         .flags = &[_][]const u8{"-std=c++17"},
     });
 
-    // zim_wrapper
+    // zim_wrapper compiled with DW define so pin types match Verilator.
     exe.root_module.addCSourceFile(.{
         .file = b.path("src/zim_wrapper.cpp"),
-        .flags = &[_][]const u8{"-std=c++17"},
+        .flags = &[_][]const u8{ "-std=c++17", b.fmt("-DDW={d}", .{dw_val}) },
     });
+
+    // Comptime DW into Zig via build_options module.
+    const build_opts = b.addOptions();
+    build_opts.addOption(u32, "DW", dw_val);
+    exe.root_module.addOptions("build_options", build_opts);
 
     // ENZO dependency
     // fetch the dependency from the .zon file
