@@ -6,17 +6,23 @@
 #  error "DW must be defined at build time (e.g. -DDW=32)"
 #endif
 
-// Pin element type for *_dat. Matches Verilator's natural storage:
+// Pin element type for *_dat. Matches Verilator's natural storage exactly so
+// the consumer touches one scalar word for DW <= 64:
 //   DW <= 8   -> CData (uint8_t)
 //   DW <= 16  -> SData (uint16_t)
-//   DW >  16  -> IData / QData / WData[] all uint32_t-pointer-compatible
-//                on little-endian hosts (x86 / ARM-LE), so we treat the
-//                pin as uint32_t* and the consumer reads/writes
-//                ceil(DW/32) words.
+//   DW <= 32  -> IData (uint32_t)
+//   DW <= 64  -> QData (uint64_t)
+//   DW >  64  -> WData[] (uint32_t[]), consumer reads/writes ceil(DW/32) words.
+// On little-endian hosts a reinterpret_cast of the storage address to DatT* is
+// layout-correct for every tier.
 #if DW <= 8
 typedef uint8_t  DatT;
 #elif DW <= 16
 typedef uint16_t DatT;
+#elif DW <= 32
+typedef uint32_t DatT;
+#elif DW <= 64
+typedef uint64_t DatT;
 #else
 typedef uint32_t DatT;
 #endif

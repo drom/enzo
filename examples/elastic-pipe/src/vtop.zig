@@ -5,12 +5,16 @@ const build_options = @import("build_options");
 
 pub const DW: u32 = build_options.DW;
 
-// Pin element type. Mirrors Verilator/zim_wrapper choice:
-//   DW<=8: CData (u8); DW<=16: SData (u16); else: IData/QData/WData[]
-//   treated as u32 array.
+// Pin element type. Mirrors Verilator/zim_wrapper choice exactly so DW<=64 is a
+// single scalar word (dat_words==1):
+//   DW<=8: CData(u8)  DW<=16: SData(u16)  DW<=32: IData(u32)
+//   DW<=64: QData(u64)  DW>64: WData[] (u32 array, ceil(DW/32) words).
+// MUST stay in lockstep with the #if ladder in zim_wrapper.cpp.
 pub const DatT: type = blk: {
     if (DW <= 8) break :blk u8;
     if (DW <= 16) break :blk u16;
+    if (DW <= 32) break :blk u32;
+    if (DW <= 64) break :blk u64;
     break :blk u32;
 };
 pub const dat_bits: u32 = @bitSizeOf(DatT);

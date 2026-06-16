@@ -69,9 +69,10 @@ const AxiSource = struct {
             if ((self.bubble_lfsr & 0xFF) < self.bubble_prob) {
                 self.sig_vld.* = 0;
             } else {
-                var i: u32 = 0;
-                while (i < dat_words) : (i += 1) {
-                    self.sig_dat[i] = @truncate(self.curr_state);
+                // dat_words is comptime: this fully unrolls. For DW<=64 it
+                // collapses to a single scalar store (no loop, no index math).
+                inline for (0..dat_words) |k| {
+                    self.sig_dat[k] = @truncate(self.curr_state);
                     self.curr_state +%= 1;
                 }
                 self.sig_vld.* = 1;
@@ -102,7 +103,7 @@ const AxiSink = struct {
             self.sig_rdy.* = 1;
         }
         if (self.sig_vld.* == 1 and self.sig_rdy.* == 1) {
-            self.last_data = @intCast(self.sig_dat[0]);
+            self.last_data = @truncate(self.sig_dat[0]);
             self.received_count +%= 1;
         }
     }
