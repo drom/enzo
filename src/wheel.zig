@@ -49,7 +49,7 @@ pub fn Wheel(comptime opts: Options) type {
         delta_limit: u32,
 
         postponed_funcs: [opts.postponed_size]ThreadFn,
-        postponed_ctxs:  [opts.postponed_size]*anyopaque,
+        postponed_ctxs: [opts.postponed_size]*anyopaque,
         postponed_count: u32,
 
         finished: bool,
@@ -74,9 +74,15 @@ pub fn Wheel(comptime opts: Options) type {
             return self.current_time;
         }
 
-        pub fn poolUsed(self: *const Self) u32 { return self.pool.used; }
-        pub fn poolPeak(self: *const Self) u32 { return self.pool.peak; }
-        pub fn poolCapacity(_: *const Self) u32 { return opts.pool_size; }
+        pub fn poolUsed(self: *const Self) u32 {
+            return self.pool.used;
+        }
+        pub fn poolPeak(self: *const Self) u32 {
+            return self.pool.peak;
+        }
+        pub fn poolCapacity(_: *const Self) u32 {
+            return opts.pool_size;
+        }
 
         // ---------------------------------------------------------------- bucketing
 
@@ -249,15 +255,18 @@ pub fn Wheel(comptime opts: Options) type {
         // `dump(self: *D, t: u64) void`. Eval+dump are skipped on idle ticks
         // (no scheduled events) — RTL state would not change anyway.
         pub fn run(self: *Self, max_cycles: u64, dut: anytype) void {
-            while (!self.isFinished() and self.current_time < max_cycles) {
-                const n = self.runActive();        // 1. ACTIVE
+            while (!self.finished and self.current_time < max_cycles) {
+                const n = self.runActive(); // 1. ACTIVE
                 if (n > 0) {
-                    dut.eval();                     // 2. EVAL
-                    _ = self.runPostponed();        // 3. UPDATE
-                    dut.eval();                     // 4. SETTLE
-                    dut.dump(self.current_time);    // 5. POSTPONED
+                    dut.eval(); // 2. EVAL
+                    const p = self.runPostponed(); // 3. UPDATE
+                    // SETTLE only when UPDATE mutated DUT inputs; eval() already
+                    // settled combinational logic to convergence in step 2, so a
+                    // second eval with unchanged inputs recomputes identical state.
+                    if (p > 0) dut.eval(); // 4. SETTLE
+                    dut.dump(self.current_time); // 5. POSTPONED
                 }
-                self.advance();                     // 6. ADVANCE
+                self.advance(); // 6. ADVANCE
             }
             self.runFinish();
         }

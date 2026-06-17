@@ -22,7 +22,7 @@ pub fn build(b: *std.Build) void {
 
     const opt_flag = switch (optimize) {
         .Debug => "-O0",
-        .ReleaseSafe, .ReleaseFast => "-O3",
+        .ReleaseSafe, .ReleaseFast => "-Os",
         .ReleaseSmall => "-Os",
     };
 
@@ -45,8 +45,8 @@ pub fn build(b: *std.Build) void {
         "Vtop.mk",
         "CXX=zig c++",
         "LINK=zig c++",
+        "OPT_SLOW=0s",
         b.fmt("OPT_FAST={s}", .{opt_flag}),
-        b.fmt("OPT_SLOW={s}", .{opt_flag}),
     });
 
     run_make.step.dependOn(&run_verilator.step);
